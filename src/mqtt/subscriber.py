@@ -102,18 +102,18 @@ class SmartFactorySubscriber:
     
 
     def _check_temperature_alert(self, topic: str, payload: Any) -> None:
-        if not (isinstance(payload, dict) and payload.get("value", 0) > CRITICAL_TEMP):
-            return
+         if not (isinstance(payload, dict) and payload.get("value", 0) > CRITICAL_TEMP):
+               return
 
-        self._alerts_fired += 1
-        value = payload["value"]
-        ts    = payload.get("timestamp", datetime.now(timezone.utc).isoformat())
+         self._alerts_fired += 1
+         value = payload["value"]
+         ts    = payload.get("timestamp", datetime.now(timezone.utc).isoformat())
 
-    print("╔══════════════════════════════════════╗")
-    print(f"║  ⚠ CRITICAL ALERT — {topic}")
-    print(f"║  Temperature: {value}°C  (threshold: {CRITICAL_TEMP}°C)")
-    print(f"║  Time: {ts}")
-    print("╚══════════════════════════════════════╝")
+         print("╔══════════════════════════════════════╗")
+         print(f"║  ⚠ CRITICAL ALERT — {topic}")
+         print(f"║  Temperature: {value}°C  (threshold: {CRITICAL_TEMP}°C)")
+         print(f"║  Time: {ts}")
+         print("╚══════════════════════════════════════╝")
 
 
 
