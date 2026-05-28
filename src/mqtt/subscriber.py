@@ -84,42 +84,54 @@ class SmartFactorySubscriber:
 
 
     def _print_message(self, msg: mqtt.MQTTMessage, payload: Any) -> None:
-        """
-        TODO 3: Print a formatted message line:
-          Format: [HH:MM:SS] {topic}  val={value_or_payload}  QoS={qos}  retain={retain}
-          - If payload is a dict with key "value", show that value with unit if present
-          - Otherwise show the raw payload
-        """
-        # TODO: implement this method
-        pass
+        now = datetime.now(timezone.utc).strftime("%H:%M:%S")
+
+        if isinstance(payload, dict) and "value" in payload:
+           unit = payload.get("unit", "")
+           val  = f"{payload['value']} {unit}".strip()
+        else:
+            val = str(payload)
+
+        print(
+            f"[{now}] {msg.topic:<50}  val={val:<18}  "
+            f"QoS={msg.qos}  retain={bool(msg.retain)}"
+        )
+
+
+
+    
 
     def _check_temperature_alert(self, topic: str, payload: Any) -> None:
-        """
-        TODO 4: Check if a temperature reading is critical.
-          - If payload is a dict and payload["value"] > CRITICAL_TEMP:
-              - Increment self._alerts_fired
-              - Print:
-                  ╔══════════════════════════════════════╗
-                  ║  ⚠ CRITICAL ALERT — {topic}
-                  ║  Temperature: {value}°C  (threshold: {CRITICAL_TEMP}°C)
-                  ║  Time: {timestamp from payload or now}
-                  ╚══════════════════════════════════════╝
-        """
-        # TODO: implement this method
-        pass
+        if not (isinstance(payload, dict) and payload.get("value", 0) > CRITICAL_TEMP):
+            return
+
+        self._alerts_fired += 1
+        value = payload["value"]
+        ts    = payload.get("timestamp", datetime.now(timezone.utc).isoformat())
+
+    print("╔══════════════════════════════════════╗")
+    print(f"║  ⚠ CRITICAL ALERT — {topic}")
+    print(f"║  Temperature: {value}°C  (threshold: {CRITICAL_TEMP}°C)")
+    print(f"║  Time: {ts}")
+    print("╚══════════════════════════════════════╝")
+
+
+
+
 
     def _print_summary(self) -> None:
-        """
-        TODO 5: Print a summary of messages received per topic.
-          Format:
-            ── Message Summary ──────────────────────
-            {topic:<50}  {count:>6} msgs
-            ...
-            Total: {sum} messages  |  Alerts fired: {self._alerts_fired}
-            ─────────────────────────────────────────
-        """
-        # TODO: implement this method
-        pass
+           total = sum(self._msg_counts.values())
+           print("── Message Summary ──────────────────────")
+           for topic, count in sorted(self._msg_counts.items()):
+               print(f"  {topic:<50}  {count:>6} msgs")
+           print(f"  Total: {total} messages  |  Alerts fired: {self._alerts_fired}")
+           print("─────────────────────────────────────────")        
+
+
+
+
+
+
 
     # ── Run ────────────────────────────────────────────────────────────────────
 
