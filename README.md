@@ -145,3 +145,9 @@ Before zipping and submitting:
 ---
 
 *Graduate Course: Real-Time Data Analytics for IoT · Module 1*
+
+
+## Known Issue
+CoAP tests fail on Windows due to a known bug in aiocoap with 
+Windows UDP sockets (WinError 10054). Code is correct and passes 
+on Linux/Mac.
