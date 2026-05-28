@@ -190,8 +190,7 @@ class ManifestResource(resource.Resource):
 # ── Resource Tree & Server Setup ──────────────────────────────────────────────
 
 async def build_server() -> aiocoap.Context:
-    import os
-    os.environ.setdefault("AIOCOAP_SERVER_TRANSPORT", "simplesocketserver")
+    
 
     root = resource.Site()
 
