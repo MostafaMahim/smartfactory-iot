@@ -56,37 +56,37 @@ class SmartFactoryPublisher:
         self.broker_port = broker_port
         self._seq: dict[str, int] = {}          # per-topic sequence counter
         self._client: Optional[mqtt.Client] = None
+        self._connected = False
 
     # ── Connection ─────────────────────────────────────────────────────────────
 
     def _build_client(self) -> mqtt.Client:
-        """
-        TODO 1: Create and configure the MQTT client.
-        Requirements:
-          - Use CLIENT_ID as the client identifier
-          - Set clean_session=False for a persistent session
-          - Register on_connect, on_publish callbacks (defined below)
-          - Configure the Last Will and Testament for EACH line:
-              topic   = f"factory/{line}/status"
-              payload = "offline"
-              qos     = 1
-              retain  = True
-            (Note: paho only supports a single LWT per client — set it for line1;
-             the tests only verify line1 LWT)
-        """
-        # TODO: implement this method
-        raise NotImplementedError
+         client = mqtt.Client(client_id=CLIENT_ID, clean_session=False)
+         client.on_connect = self.on_connect
+         client.on_publish = self.on_publish
+         client.will_set(
+            topic="factory/line1/status",
+            payload="offline",
+            qos=1,
+            retain=True,
+         )
+         self._client = client
+         return client
+       
 
     def connect(self) -> None:
-        """
-        TODO 2: Connect to the broker and publish the initial 'online' retained
-        status message for each line.
-          - Start the network loop (loop_start)
-          - Wait up to 5 seconds for the connection to establish
-          - For each line, publish retained 'online' to factory/{line}/status (QoS 1)
-        """
-        # TODO: implement this method
-        raise NotImplementedError
+        self._build_client()
+        self._client.connect(self.broker_host, self.broker_port, keepalive=60)
+        self._client.loop_start()
+
+        deadline = time.time() + 5
+        while not self._connected and time.time() < deadline:
+             time.sleep(0.05)
+
+        for line in LINES:
+             self._client.publish(f"factory/{line}/status", "online", qos=1, retain=True)
+             log.info("Published retained 'online' → factory/%s/status", line)
+   
 
     def disconnect(self) -> None:
         """Cleanly disconnect: publish 'offline' retained for each line, then stop."""
@@ -101,21 +101,16 @@ class SmartFactoryPublisher:
     # ── Callbacks ──────────────────────────────────────────────────────────────
 
     def on_connect(self, client, userdata, flags, rc: int) -> None:
-        """
-        TODO 3: Implement the on_connect callback.
-          - Log "Connected (rc=<rc>)" at INFO level on success (rc == 0)
-          - Log "Connection refused: <rc>" at ERROR level on failure
-        """
-        # TODO: implement this callback
-        pass
+        if rc == 0:
+          self._connected = True
+          log.info("Connected (rc=%d)", rc)
+        else:
+          log.error("Connection refused: %d", rc)
+         
 
     def on_publish(self, client, userdata, mid: int) -> None:
-        """
-        TODO 4: Implement the on_publish callback.
-          - Log "PUBACK received for mid=<mid>" at DEBUG level
-        """
-        # TODO: implement this callback
-        pass
+        log.debug("PUBACK received for mid=%d", mid)
+       
 
     # ── Sensor Simulation ──────────────────────────────────────────────────────
 
@@ -141,21 +136,23 @@ class SmartFactoryPublisher:
           Example: factory/line1/temperature
         """
         # TODO: implement this method
-        raise NotImplementedError
+        return f"factory/{line}/{sensor}"
 
     # ── Publishing ─────────────────────────────────────────────────────────────
 
     def publish_reading(self, line: str, sensor: str) -> SensorReading:
-        """
-        TODO 6: Simulate a reading and publish it.
-          - Generate a SensorReading using _simulate_reading
-          - Serialise to JSON (use dataclasses.asdict)
-          - Publish to the correct topic at the sensor's configured QoS level
-          - Log the publication: "[{line}/{sensor}] value={value} {unit}  QoS={qos}  seq={seq}"
-          - Return the SensorReading for testing purposes
-        """
-        # TODO: implement this method
-        raise NotImplementedError
+          reading = self._simulate_reading(line, sensor)
+          topic   = self._topic(line, sensor)
+          qos     = SENSORS[sensor]["qos"]
+          payload = json.dumps(asdict(reading))
+
+          self._client.publish(topic, payload, qos=qos)
+          log.info(
+              "[%s/%s] value=%.3f %s  QoS=%d  seq=%d",
+               line, sensor, reading.value, reading.unit, qos, reading.seq,
+            )
+          return reading
+      
 
     # ── Main Loop ──────────────────────────────────────────────────────────────
 

@@ -50,29 +50,38 @@ class SmartFactorySubscriber:
     # ── Connection ─────────────────────────────────────────────────────────────
 
     def on_connect(self, client, userdata, flags: dict, rc: int) -> None:
-        """
-        TODO 1: On successful connect (rc == 0):
-          - Log "Connected to broker"
-          - Subscribe to TOPIC_ALL at QoS 1
-          - Subscribe to TOPIC_TEMP at QoS 2  (separate subscription)
-          Log any connection failure at ERROR level.
-        """
-        # TODO: implement this callback
-        pass
+          if rc == 0:
+            log.info("Connected to broker")
+            client.subscribe(TOPIC_ALL, qos=1)
+            client.subscribe(TOPIC_TEMP, qos=2)
+          else:
+             log.error("Connection refused: %d", rc)
+        
 
     # ── Message Handling ───────────────────────────────────────────────────────
 
     def on_message(self, client, userdata, msg: mqtt.MQTTMessage) -> None:
-        """
-        TODO 2: Handle every incoming message.
-          - Increment self._msg_counts[msg.topic]
-          - Attempt to parse msg.payload as JSON; fall back to raw string
-          - Call _print_message to display the message
-          - If the topic ends with '/temperature', call _check_temperature_alert
-          - Every SUMMARY_INTERVAL seconds, call _print_summary
-        """
-        # TODO: implement this callback
-        pass
+        self._msg_counts[msg.topic] += 1
+
+
+        try:
+           payload = json.loads(msg.payload.decode("utf-8"))
+        except (json.JSONDecodeError, UnicodeDecodeError):
+           payload = msg.payload.decode("utf-8", errors="replace")
+
+        self._print_message(msg, payload)
+
+        if msg.topic.endswith("/temperature"):
+            self._check_temperature_alert(msg.topic, payload)
+
+        if time.time() - self._last_summary >= SUMMARY_INTERVAL:
+            self._print_summary()
+            self._last_summary = time.time()
+ 
+
+
+
+
 
     def _print_message(self, msg: mqtt.MQTTMessage, payload: Any) -> None:
         """
